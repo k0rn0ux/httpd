@@ -1,0 +1,72 @@
+---
+- hosts: epam-httpd
+  become: yes
+
+  tasks:
+    - name: install httpd
+      ansible.builtin.package:
+        name: 
+          - httpd
+          - mod_ssl
+          - mod_proxy_html
+        state: latest
+    
+    - name: allow needed ports on firewall
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        immediate: yes
+        state: enabled
+      loop:
+        - http
+        - https
+      
+    - name: create directory for certificate key
+      ansible.builtin.file:
+        path: /etc/ssl/private
+        state: directory
+        mode: 0700
+    
+    - name: copy certificate
+      ansible.builtin.copy:
+        src: cert/epam-httpd.lan.crt
+        dest: /etc/ssl/certs
+        mode: 0400
+    
+    - name: copy certificate key
+      ansible.builtin.copy:
+        src: cert/epam-httpd.lan.key
+        dest: /etc/ssl/private
+        mode: 0400
+    
+    - name: copy httpd confs
+      ansible.builtin.copy:
+        src: "httpd-conf/{{ item }}"
+        dest: /etc/httpd/conf.d/
+        mode: 0644
+      loop:
+        - custom_ports.conf
+        - proxy.conf
+        - app.conf
+
+    - name: copy proxy contents
+      ansible.builtin.copy:
+        src: proxy
+        dest: /var/www/
+        mode: 0500
+        owner: apache
+        group: apache
+      
+    - name: copy app contents
+      ansible.builtin.copy:
+        src: app
+        dest: /var/www/
+        mode: 0500
+        owner: apache
+        group: apache
+
+    - name: autostart httpd
+      ansible.builtin.systemd:
+        name: httpd
+        state: restarted
+        enabled: yes
