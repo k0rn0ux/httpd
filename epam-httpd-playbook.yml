@@ -48,23 +48,20 @@
         - custom_ports.conf
         - proxy.conf
         - app.conf
+        - app-rewrited.conf
 
-    - name: copy proxy contents
+    - name: copy hosts contents
       ansible.builtin.copy:
-        src: proxy
+        src: "{{ item }}"
         dest: /var/www/
         mode: 0500
         owner: apache
         group: apache
+      loop:
+        - proxy
+        - app
+        - app-rewrited
       
-    - name: copy app contents
-      ansible.builtin.copy:
-        src: app
-        dest: /var/www/
-        mode: 0500
-        owner: apache
-        group: apache
-
     - name: autostart httpd
       ansible.builtin.systemd:
         name: httpd
